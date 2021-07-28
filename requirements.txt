@@ -1,0 +1,5 @@
+functions-framework==2.2.1
+flask==2.0.1
+google-cloud-error-reporting==1.2.1
+requests==2.26.0
+google-cloud-firestore==2.2.0
