@@ -1,12 +1,10 @@
 import sys
 import os
+from datetime import date
 import requests
 from html.parser import HTMLParser
 from google.cloud import firestore
 from flask import escape
-
-rsSemester = '202120'
-csSemester = '020212'
 
 db = firestore.Client(project=os.environ.get('GOOGLE_CLOUD_PROJECT'))
 sections_ref = db.collection(u'sections')
@@ -167,10 +165,26 @@ def delete_colletion( coll_ref, batch_size ):
 
 def emptyAndUpdateSections():
     delete_colletion( sections_ref, 100 )
-    rsSectionCount = loadRS( rsSemester, sections_ref )
-    csSectionCount = loadCS( csSemester, sections_ref )
-    return { 'rsSectionCount': rsSectionCount, 'csSectionCount': csSectionCount }
+    today = date.today()
+    year1 = today.year
+    semester1 = ((today.month-1)//4 + 1)*10
+    if semester1 == 30:
+        year2 = year1 + 1
+        semester2 = 10
+    else:
+        year2 = year1
+        semester2 = semester1 + 10
 
+    rssemester1 = '{}{}'.format(year1,semester1)
+    rssemester2 = '{}{}'.format(year2,semester2)
+    cssemester1 = '0{}{}'.format(year1,semester1//10)
+    cssemester2 = '0{}{}'.format(year2,semester2//10)
+
+    rsSectionCount = loadRS( rssemester1, sections_ref )
+    csSectionCount = loadCS( cssemester1, sections_ref )
+    rsSectionCount = rsSectionCount + loadRS( rssemester2, sections_ref )
+    csSectionCount = csSectionCount + loadCS( cssemester2, sections_ref )
+    return { 'rsSectionCount': rsSectionCount, 'csSectionCount': csSectionCount }
 
 def sections(request):
     """HTTP Cloud Function.
@@ -182,22 +196,38 @@ def sections(request):
         Response object using `make_response`
         <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
     """
+
+    rssemester = ''
+    cssemester = ''
+
     request_json = request.get_json(silent=True)
     request_args = request.args
 
-    if request_json and 'name' in request_json:
-        name = request_json['name']
-    elif request_args and 'name' in request_args:
-        name = request_args['name']
-    else:
-        name = 'World'
+    if request_json:
+        if 'rssemester' in request_json:
+            rssemester = request_json['rssemester']
+        if 'cssemester' in request_json:
+            cssemester = request_json['cssemester']
+    elif request_args:
+        if 'rssemester' in request_args:
+            rssemester = request_args['rssemester']
+        if 'cssemester' in request_args:
+            cssemester = request_args['cssemester']
 
-    docs = sections_ref.stream()
+    rssemester = rssemester.strip()
+    cssemester = cssemester.strip()
+
+    rssemester = rssemester[:6]
+    cssemester = cssemester[:6]
+
+
+    docs = sections_ref.where(u'semester', u'in', [rssemester,cssemester]).stream()
     results = []
     for doc in docs:
         results.append( doc.to_dict() )
 
-    return {'Items': results}        
+    return {'Items': results}
+        
 
 
 def updateSections(event, context):
