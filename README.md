@@ -19,9 +19,11 @@ Create a native Firstore database in the project. Create the
 `sections` collection which will be used store the information
 about each section in the timetable.
 
-Deploy the `updateSections` Cloud Function:
+Use the Google Cloud Shell to deploy the `updateSections` Cloud Function as follows:
 
 ```shell
+git clone https://github.com/koehlerb/langara-timetable-scraper.git
+cd langara-timetable-scraper
 gcloud functions deploy updateSections --timeout 540s --runtime python39 --trigger-topic langara_schedule_cron
 ```
 
@@ -31,11 +33,9 @@ empties the `sections` collection in the Firestore database; scrapes
 the timetable for the current and next semester from the Langara
 website and fills the `sections` collection with the new data.
 
-Use the Google Cloud Shell to deploy the `sections` Cloud Function as follows:
+Deploy the `sections` Cloud Function as follows:
 
 ```shell
-git clone https://github.com/koehlerb/langara-timetable-scraper.git
-cd langara-timetable-scraper
 gcloud functions deploy sections --runtime python39 --trigger-http --allow-unauthenticated
 ```
 
